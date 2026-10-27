@@ -1,0 +1,39 @@
+BasedOnStyle: LLVM
+UseTab: Never
+IndentWidth: 2
+TabWidth: 2
+PointerAlignment: Left
+ReferenceAlignment: Left
+QualifierAlignment: Right
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+IndentCaseLabels: true
+AccessModifierOffset: -2
+NamespaceIndentation: All
+ColumnLimit: 120
+AllowShortFunctionsOnASingleLine: None
+IndentPPDirectives: AfterHash
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBraces: Attach
+LineEnding: LF
+
+# At new line at end of file
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtEOF: true
+
+# One arg per line
+BinPackArguments: false
+BinPackParameters: OnePerLine
+ExperimentalAutoDetectBinPacking: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+SortIncludes:
+  Enabled: true
+IncludeBlocks: Merge
+IncludeCategories:
+  # Headers in "" with extension. Internal includes.
+  - Regex: '^"[^"]+"$'
+    Priority: 1
+  # Headers in <>. Probably external/std libraries.
+  - Regex: "^<[^>]+>$"
+    Priority: 2

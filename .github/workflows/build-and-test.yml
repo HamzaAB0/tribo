@@ -1,0 +1,108 @@
+name: Build and Test
+
+# To avoid duplicate jobs running when both push and PR is satisfied, we use this:
+# https://github.com/orgs/community/discussions/26940#discussioncomment-5686753
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Stop stale workflows when pull requests are updated: https://stackoverflow.com/a/70972844
+# Does not apply to the main branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        system:
+          [
+            { arch: x86_64, tag: ubuntu-26.04 },
+            { arch: aarch64, tag: ubuntu-26.04-arm }
+          ]
+    runs-on: ${{ matrix.system.tag }}
+    name: linux-${{ matrix.system.arch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run [clang-tidy]
+        run: make CC=clang tidy
+
+      - name: Build [gcc-release]
+        run: make CC=gcc
+
+      - name: Run [gcc-release]
+        run: ./bin/tribo-cli
+
+      - name: Clean
+        run: make clean
+
+      - name: Build [clang-debug]
+        run: make CC=clang DEBUG=1
+
+      - name: Run [clang-debug]
+        run: ./bin/tribo-cli
+  macos:
+    runs-on: macos-26
+    name: macos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build [gcc-release]
+        run: make CC=gcc-15
+
+      - name: Run [gcc-release]
+        run: ./bin/tribo-cli
+
+      - name: Clean
+        run: make clean
+
+      - name: Build [clang-debug]
+        run: make DEBUG=1
+
+      - name: Run [clang-debug]
+        run: ./bin/tribo-cli
+
+  windows:
+    strategy:
+      matrix:
+        system:
+          [
+            { arch: aarch64, tag: windows-11-arm },
+            { arch: x86_64, tag: windows-2025 },
+          ]
+    runs-on: ${{ matrix.system.tag }}
+    name: windows-${{ matrix.system.arch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build [clang-release]
+        run: |
+          . ./tools/Set-MsvcEnv.ps1
+          nmake CC=clang-cl
+
+      - name: Run [clang-release]
+        run: ./bin/tribo-cli.exe
+
+      - name: Clean
+        run: |
+          . ./tools/Set-MsvcEnv.ps1
+          nmake clean
+
+      - name: Build [cl-debug]
+        run: |
+          . ./tools/Set-MsvcEnv.ps1
+          nmake CC=cl DEBUG=1
+
+      - name: Run [cl-debug]
+        run:  |
+          . ./tools/Set-MsvcEnv.ps1
+          ./bin/tribo-cli.exe
