@@ -1,0 +1,157 @@
+name: Build and Test
+
+# To avoid duplicate jobs running when both push and PR is satisfied, we use this:
+# https://github.com/orgs/community/discussions/26940#discussioncomment-5686753
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Stop stale workflows when pull requests are updated: https://stackoverflow.com/a/70972844
+# Does not apply to the main branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  linux-clang:
+    strategy:
+      matrix:
+        system:
+          [
+            { arch: arm64, tag: ubuntu-26.04-arm},
+            { arch: x64, tag: ubuntu-26.04 },
+          ]
+        config: [ debug, release, default ]
+    runs-on: ${{ matrix.system.tag }}
+    name: linux-${{ matrix.system.arch }}-clang-${{ matrix.config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install compiler
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 23 all
+
+      - name: Build
+        run: cmake --workflow --preset ${{ matrix.config }}
+        env:
+          CXX: clang++-23
+
+  linux-gcc:
+    strategy:
+      matrix:
+        system:
+          [
+            { arch: arm64, tag: ubuntu-26.04-arm},
+            { arch: x64, tag: ubuntu-26.04 },
+          ]
+        config: [ debug, release, default ]
+    runs-on: ${{ matrix.system.tag }}
+    name: linux-${{ matrix.system.arch }}-gcc-${{ matrix.config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install compiler
+        run: |
+          /home/linuxbrew/.linuxbrew/bin/brew install gcc@16
+          echo "CXX=$(/home/linuxbrew/.linuxbrew/bin/brew --prefix gcc@16)/bin/g++-16" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: cmake --workflow --preset ${{ matrix.config }}
+
+  macos-gcc:
+    strategy:
+      matrix:
+        config: [ debug, release, default ]
+    runs-on: macos-26
+    name: macos-gcc
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install compiler
+        run: brew install gcc@16
+
+      - name: Build dev
+        run: cmake --workflow --preset ${{ matrix.config }}
+        env:
+          CXX: g++-16
+
+  macos-clang:
+    strategy:
+      matrix:
+        config: [ debug, release ]
+    runs-on: macos-26
+    name: macos-clang-${{ matrix.config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install compiler
+        run: |
+          brew install llvm@23 lld@23
+          echo "CXX=$(brew --prefix llvm@23)/bin/clang++" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: cmake --workflow --preset brew-clang-${{ matrix.config }}
+
+  windows-msbuild:
+    strategy:
+      matrix:
+        system:
+          [
+            { arch: arm64, tag: windows-11-arm },
+            { arch: x64, tag: windows-2025 },
+          ]
+        config: [ debug, release ]
+    runs-on: ${{ matrix.system.tag }}
+    name: windows-${{ matrix.system.arch }}-msvc-msbuild-${{ matrix.config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Premake
+        uses: ./.github/actions/setup-premake
+
+      - name: Run Premake
+        run: ./premake5 vs2026
+
+      - name: Build
+        run: |
+          . ./tools/Set-MsvcEnv.ps1
+          msbuild build/tribo.slnx -p:Configuration=${{ matrix.config }} -p:Platform=${{ matrix.system.arch }} -m
+
+      # Debug builds needs MSVC env for asan libs
+      - name: Run
+        run: |
+          . ./tools/Set-MsvcEnv.ps1
+          ./build/debug-${{ matrix.system.arch }}/bin/tribo-cli
+
+  windows-cmake:
+    strategy:
+      matrix:
+        system:
+          [
+            { arch: arm64, tag: windows-11-arm },
+            { arch: x64, tag: windows-2025 },
+          ]
+        config: [ debug, release, default ]
+    runs-on: ${{ matrix.system.tag }}
+    name: windows-${{ matrix.system.arch }}-msvc-cmake-${{ matrix.config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build CMake
+        run: |
+          . ./tools/Set-MsvcEnv.ps1
+          cmake --workflow --preset ${{ matrix.config }}
+        env:
+          CXX: cl

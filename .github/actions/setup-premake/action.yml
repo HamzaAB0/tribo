@@ -1,0 +1,28 @@
+name: Setup Premake
+description: Restore cached Premake or install it
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Premake
+      id: cache-premake
+      uses: actions/cache@v6
+      with:
+        path: |
+          ./premake5
+          ./premake5.exe
+        key: premake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('./tools/Get-Deps.ps1') }}
+
+    - name: Install UUID
+      if: runner.os == 'Linux' && steps.cache-premake.outputs.cache-hit != 'true'
+      shell: bash
+      run: sudo apt-get install -y uuid-dev
+
+    - name: Install Premake
+      if: steps.cache-premake.outputs.cache-hit != 'true'
+      run: ./tools/Get-Deps.ps1 -Project premake-core
+      shell: pwsh
+
+    - name: Setup Dependencies
+      run: ./tools/Get-Deps.ps1
+      shell: pwsh

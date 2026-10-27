@@ -1,0 +1,14 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 4,
+    "patch": 4
+  },
+  "include": [
+    "tools/cmake/presets/default.json",
+    "tools/cmake/presets/dev.json",
+    "tools/cmake/presets/brew-clang.json"
+  ],
+  "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json"
+}
