@@ -1,0 +1,22 @@
+[package]
+name = "tribo"
+version = "0.1.0"
+edition = "2024"
+description = "1D Hydrodynamic lubrication solver"
+
+[profile.lto]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+
+[[bin]]
+name = "tribo-cli"
+path = "src/cli/main.rs"
+
+[lib]
+name = "tribo_solver"
+path = "src/solver/lib.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+num-traits = "0.2.19"

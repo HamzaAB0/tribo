@@ -1,0 +1,38 @@
+name: Build and Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-aarch64, runner: windows-11-arm }
+          - { name: windows-x86_64, runner: windows-2025 }
+          - { name: linux-aarch64, runner: ubuntu-26.04-arm }
+          - { name: linux-x86_64, runner: ubuntu-26.04 }
+          - { name: macos, runner: macos-26 }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build
+        run: cargo build --locked --profile lto
+
+      - name: Test
+        run: cargo test --locked --profile lto
